@@ -28,8 +28,9 @@ export async function fetchRepoAndSave() {
     }
 
     const accessToken = githubAccount[0].accessToken;
-
-    const response = await fetch("https://api.github.com/user/repos", {
+    let allRepos: any[] = [];
+    let page = 1;
+    const response = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github+json",
@@ -41,6 +42,8 @@ export async function fetchRepoAndSave() {
     }
 
     const repos = await response.json();
+    allRepos.push(...repos)
+
 
     const data = repos.map((repo: any) => ({
       id: uuidv4(),
