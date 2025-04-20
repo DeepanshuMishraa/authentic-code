@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean, varchar } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -45,3 +45,24 @@ export const verification = pgTable("verification", {
   createdAt: timestamp('created_at'),
   updatedAt: timestamp('updated_at')
 });
+
+
+export const repositories = pgTable("repositories", {
+  id: text("id").primaryKey(),
+  repoName: text('repo_name').notNull(),
+  repoUrl: text('repo_url').notNull(),
+  userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+  lastScannedAt: timestamp('last_scanned_at'),
+  createdAt: timestamp('created_at').notNull(),
+})
+
+
+export const scanResult = pgTable("scan_result", {
+  id: text("id").primaryKey(),
+  repoId: text("repo_id").references(() => repositories.id, { onDelete: 'cascade' }),
+  authencityScore: integer('authencity_score').notNull(),
+  confidenceLevel: integer('confidence_level').notNull(),
+  reasoning: text('reasoning').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+})
+
