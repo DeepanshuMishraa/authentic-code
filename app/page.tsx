@@ -2,6 +2,7 @@
 
 import { fetchRepoAndSave } from "@/actions/action";
 import { Button } from "@/components/ui/button";
+import { AnalyzeCode } from "@/lib/ai";
 import { authClient } from "@/lib/auth.client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,7 +18,7 @@ export default function Home() {
       setLoading(true);
       const data = await fetchRepoAndSave();
       if (Array.isArray(data)) {
-        setRepos(data); 
+        setRepos(data);
       } else {
         console.error("Unexpected response:", data);
         alert("Something went wrong");
@@ -43,6 +44,15 @@ export default function Home() {
             router.push("/");
           }}>
             Logout
+          </Button>
+
+          <Button onClick={async () => {
+            await AnalyzeCode(`
+                function sum(a:number,b:number):number{
+  return a+b;
+  }`)
+          }}>
+            Ping AI
           </Button>
         </div>
         <div className="mt-10 w-full max-w-2xl">
