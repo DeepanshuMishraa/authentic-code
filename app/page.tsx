@@ -1,6 +1,6 @@
 'use client';
 
-import { fetchRepoAndSave } from "@/actions/action";
+import { fetchRepoAndSave, ChunkTheRepositories } from "@/actions/action";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth.client";
 import { useRouter } from "next/navigation";
@@ -11,13 +11,14 @@ export default function Home() {
   const session = authClient.useSession();
   const [repos, setRepos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [analyzingRepoId, setAnalyzingRepoId] = useState<string | null>(null);
 
   async function handleFetchRepos() {
     try {
       setLoading(true);
       const data = await fetchRepoAndSave();
       if (Array.isArray(data)) {
-        setRepos(data); 
+        setRepos(data);
       } else {
         console.error("Unexpected response:", data);
         alert("Something went wrong");
@@ -27,6 +28,25 @@ export default function Home() {
       alert("Failed to fetch repositories.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAnalyze(repo: any) {
+    try {
+      setAnalyzingRepoId(repo.id);
+      const result = await ChunkTheRepositories(repo);
+
+      if (result.success) {
+        alert(`Analyzed ${result.chunksAnalyzed} chunks successfully!`);
+        console.log("Analysis Results:", result.analysisResults);
+      } else {
+        alert(`Failed to analyze: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("Error analyzing repository:", error);
+      alert("Failed to analyze repository.");
+    } finally {
+      setAnalyzingRepoId(null);
     }
   }
 
@@ -51,7 +71,7 @@ export default function Home() {
               {repos.map((repo) => (
                 <li
                   key={repo.id}
-                  className="border p-4 rounded-lg shadow hover:bg-gray-50 transition"
+                  className="border flex justify-between items-center p-4 rounded-lg shadow hover:bg-gray-50 transition"
                 >
                   <a
                     href={repo.repoUrl}
@@ -61,6 +81,13 @@ export default function Home() {
                   >
                     {repo.repoName}
                   </a>
+                  <Button
+                    variant="outline"
+                    disabled={analyzingRepoId === repo.id}
+                    onClick={() => handleAnalyze(repo)}
+                  >
+                    {analyzingRepoId === repo.id ? "Analyzing..." : "Analyze"}
+                  </Button>
                 </li>
               ))}
             </ul>
