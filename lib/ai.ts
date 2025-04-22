@@ -1,13 +1,14 @@
-import { GoogleGenAI } from "@google/genai";
+import { generateText } from 'ai';
+import { createGroq } from '@ai-sdk/groq';
 
-const ai = new GoogleGenAI({
-  apiKey: "AIzaSyA9GWoYeSDKrDHjG1HzMq4cjVnN2bNdXFM",
-});
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY as string,
+})
 
 
 export async function AnalyzeCode(code: any) {
 
-  const propmt = `You are a highly specialized code authenticity auditor.
+  const prompt = `You are a highly specialized code authenticity auditor.
 
     Your mission is to detect subtle signs of AI-generated versus human-written code.
 
@@ -27,23 +28,24 @@ export async function AnalyzeCode(code: any) {
       "writing_style": "Summary of detected writing style (human-like, AI-like, hybrid).",
       "confidence_level": "High, Medium, or Low"
     }
-
-    CODE TO ANALYZE:
-    ${code}
    `
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: [
+  const response = await generateText({
+    model: groq('gemma2-9b-it'),
+    messages: [
       {
-        parts: [{ text: propmt }]
+        role: 'system',
+        content: prompt
+      },
+      {
+        role: "user",
+        content: code
       }
     ]
-  });
+  })
 
-  console.log(response.text);
+  console.log("AI Response:", response.response.messages[0].content);
 
-  const result = response.text;
-  return result;
+  return response.response.messages[0].content;
 }
 
