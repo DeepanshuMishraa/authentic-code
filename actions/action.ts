@@ -58,7 +58,7 @@ export async function fetchRepoAndSave() {
 
     await db.insert(repositories).values(data);
 
-    return data;
+    return repos;
   } catch (error) {
     return {
       success: false,

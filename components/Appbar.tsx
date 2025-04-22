@@ -2,15 +2,17 @@
 
 import { authClient } from "@/lib/auth.client";
 import { Button } from "./ui/button"
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Appbar() {
   const session = authClient.useSession();
   const router = useRouter();
+  const pathName = usePathname();
   return (
     <div className="flex items-center justify-between p-4">
       <div>
-        <h1>XYZ</h1>
+        <Link href="/" className="font-bold text-2xl">Checker</Link>
       </div>
       <div>
         {session?.data?.user ? (
@@ -31,6 +33,12 @@ export default function Appbar() {
             router.refresh();
           }}>
             Login with GitHub
+          </Button>
+        )}
+
+        {session?.data?.user && pathName === "/" && (
+          <Button variant="outline" className="ml-2" onClick={() => router.push("/dashboard")}>
+            Check Repositories
           </Button>
         )}
       </div>

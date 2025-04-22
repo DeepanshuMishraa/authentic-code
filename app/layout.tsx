@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from 'next/font/local'
 import "./globals.css";
+import QueryProvider from "./provider";
+import Appbar from "@/components/Appbar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const satoshi = localFont({
+  src: "./Satoshi-Variable.ttf",
+})
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -24,11 +20,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <QueryProvider>
+        <body
+          className={`${satoshi.className} antialiased`}
+        >
+          <Appbar />
+
+          {children}
+        </body>
+      </QueryProvider>
     </html>
   );
 }
