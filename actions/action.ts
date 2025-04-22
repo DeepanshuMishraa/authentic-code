@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { account, repositories } from "@/db/schema"
+import { account, repositories, scanResult } from "@/db/schema"
 import { auth } from "@/lib/auth";
 import { eq } from "drizzle-orm"
 import { headers } from "next/headers";
@@ -11,7 +11,6 @@ import { AnalyzeCode } from "@/lib/ai";
 
 
 export async function fetchRepoAndSave() {
-
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -20,7 +19,6 @@ export async function fetchRepoAndSave() {
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
-
 
     const userId = session?.user.id;
     const githubAccount = await db.select().from(account).where(eq(account.userId, userId));
@@ -44,19 +42,30 @@ export async function fetchRepoAndSave() {
     }
 
     const repos = await response.json();
-    allRepos.push(...repos)
+    allRepos.push(...repos);
 
+    const existingRepos = await db
+      .select({
+        repoUrl: repositories.repoUrl
+      })
+      .from(repositories)
+      .where(eq(repositories.userId, userId));
 
-    const data = repos.map((repo: any) => ({
-      id: uuidv4(),
-      repoName: repo.name,
-      repoUrl: repo.html_url,
-      userId,
-      createdAt: new Date(),
-    }));
+    const existingRepoUrls = new Set(existingRepos.map(repo => repo.repoUrl));
 
+    const newRepos = repos.filter((repo: any) => !existingRepoUrls.has(repo.html_url));
 
-    await db.insert(repositories).values(data);
+    if (newRepos.length > 0) {
+      const data = newRepos.map((repo: any) => ({
+        id: uuidv4(),
+        repoName: repo.name,
+        repoUrl: repo.html_url,
+        userId,
+        createdAt: new Date(),
+      }));
+
+      await db.insert(repositories).values(data);
+    }
 
     return repos;
   } catch (error) {
@@ -133,6 +142,29 @@ export async function ChunkTheRepositories(repo: any) {
     for (const chunk of chunks) {
       const result = await AnalyzeCode(chunk);
       results.push(result);
+    }
+
+    const existingRepo = await db
+      .select()
+      .from(repositories)
+      .where(eq(repositories.repoUrl, repo.repoUrl))
+      .limit(1);
+
+    if (!existingRepo[0]) {
+      throw new Error("Repository not found in database");
+    }
+
+    const repoId = existingRepo[0].id;
+
+    for (const result of results) {
+      await db.insert(scanResult).values({
+        id: uuidv4(),
+        repoId: repoId,
+        authencityScore: result.authenticityScore,
+        confidenceLevel: result.confidenceLevel,
+        reasoning: result.reasoning,
+        createdAt: new Date()
+      });
     }
 
     return {

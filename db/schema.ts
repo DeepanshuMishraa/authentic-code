@@ -60,9 +60,9 @@ export const repositories = pgTable("repositories", {
 export const scanResult = pgTable("scan_result", {
   id: text("id").primaryKey(),
   repoId: text("repo_id").references(() => repositories.id, { onDelete: 'cascade' }),
-  authencityScore: integer('authencity_score').notNull(),
-  confidenceLevel: integer('confidence_level').notNull(),
-  reasoning: text('reasoning').notNull(),
+  authencityScore: integer('authencity_score'),
+  confidenceLevel: text('confidence_level'),
+  reasoning: text('reasoning'),
   createdAt: timestamp('created_at').notNull(),
 })
 

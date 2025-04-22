@@ -1,0 +1,1 @@
+ALTER TABLE "scan_result" ALTER COLUMN "confidence_level" SET DATA TYPE text;

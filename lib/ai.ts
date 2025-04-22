@@ -5,7 +5,6 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY as string,
 })
 
-
 export async function AnalyzeCode(code: any) {
 
   const prompt = `You are a highly specialized code authenticity auditor.
@@ -30,22 +29,63 @@ export async function AnalyzeCode(code: any) {
     }
    `
 
-  const response = await generateText({
-    model: groq('gemma2-9b-it'),
-    messages: [
-      {
-        role: 'system',
-        content: prompt
-      },
-      {
-        role: "user",
-        content: code
-      }
-    ]
-  })
+  try {
+    console.log("Sending code to AI...");
+    const response = await generateText({
+      model: groq('gemma2-9b-it'),
+      messages: [
+        {
+          role: 'system',
+          content: prompt
+        },
+        {
+          role: "user",
+          content: code
+        }
+      ]
+    });
 
-  console.log("AI Response:", response.response.messages[0].content);
+    const content = response.response?.messages?.[0]?.content;
+    if (!content) {
+      throw new Error("Empty response from AI");
+    }
+    let result: string;
+    if (Array.isArray(content)) {
+      result = content[0]?.text || '';
+    } else {
+      result = content;
+    }
 
-  return response.response.messages[0].content;
+    const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/i);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[1]);
+      console.log("Parsed JSON from markdown:", parsed);
+      return {
+        authenticityScore: Number(parsed.authenticity_score) || 0,
+        reasoning: parsed.reasoning || "No reasoning provided",
+        writingStyle: parsed.writing_style || "Unknown",
+        confidenceLevel: parsed.confidence_level || "Low"
+      };
+    }
+
+    try {
+      const parsed = JSON.parse(result);
+      console.log("Parsed JSON:", parsed);
+      return {
+        authenticityScore: Number(parsed.authenticity_score) || 0,
+        reasoning: parsed.reasoning || "No reasoning provided",
+        writingStyle: parsed.writing_style || "Unknown",
+        confidenceLevel: parsed.confidence_level || "Low"
+      };
+    } catch (error) {
+      console.error("Failed to parse response:", error);
+      throw new Error("Could not parse AI response");
+    }
+
+  } catch (error) {
+    console.error("Analysis failed:", error);
+    throw new Error(`AI analysis failed: ${error}`);
+  }
 }
+
 

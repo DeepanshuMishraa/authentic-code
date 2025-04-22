@@ -15,6 +15,20 @@
       "when": 1745179144021,
       "tag": "0001_stale_alice",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745338500785,
+      "tag": "0002_left_tony_stark",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1745339955871,
+      "tag": "0003_nebulous_captain_britain",
+      "breakpoints": true
     }
   ]
 }
