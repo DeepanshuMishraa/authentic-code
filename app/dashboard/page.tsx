@@ -1,13 +1,14 @@
 'use client'
 
-import { fetchRepoAndSave } from "@/actions/action";
+import { ChunkTheRepositories, fetchRepoAndSave } from "@/actions/action";
 import { Button } from "@/components/ui/button";
 import { GitHubRepo } from "@/lib/types";
-import { useQuery } from "@tanstack/react-query"
-
-
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { useState } from "react";
 
 export default function Dash() {
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
+
   const query = useQuery<GitHubRepo[]>({
     queryKey: ['repos'],
     queryFn: async () => {
@@ -17,6 +18,20 @@ export default function Dash() {
       } else {
         throw new Error("Unexpected response");
       }
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (repoUrl: string) => {
+      return await ChunkTheRepositories({ repoUrl });
+    },
+    onSuccess: (data) => {
+      console.log("Analysis: ", data);
+      setAnalyzingId(null);
+    },
+    onError: (error) => {
+      console.error("Analysis error :", error);
+      setAnalyzingId(null);
     }
   });
 
@@ -62,10 +77,13 @@ export default function Dash() {
                 )}
               </div>
               <Button
-
-                onClick={() => console.log(`Analyzing repo: ${repo.name}`)}
+                onClick={() => {
+                  setAnalyzingId(repo.id);
+                  mutation.mutate(repo.html_url);
+                }}
+                disabled={analyzingId !== null && analyzingId !== repo.id}
               >
-                Analyze
+                {analyzingId === repo.id ? "Analyzing..." : "Analyze"}
               </Button>
             </div>
             <div className="flex items-center text-sm text-gray-500 mt-4">
