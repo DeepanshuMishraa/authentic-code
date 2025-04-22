@@ -170,7 +170,8 @@ export async function ChunkTheRepositories(repo: any) {
     return {
       success: true,
       chunksAnalyzed: results.length,
-      analysisResults: results
+      analysisResults: results,
+      repoId: repoId
     };
 
   } catch (error: any) {
@@ -178,5 +179,18 @@ export async function ChunkTheRepositories(repo: any) {
       success: false,
       message: error.message || "Unknown error"
     };
+  }
+}
+
+
+export async function getAnalysis(repoId: string) {
+  try {
+    const analysis = await db.select().from(scanResult).where(eq(scanResult.repoId, repoId));
+    if (!analysis.length) {
+      return null;
+    }
+    return analysis;
+  } catch (error) {
+    throw error;
   }
 }

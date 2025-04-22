@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 import "./globals.css";
 import QueryProvider from "./provider";
 import Appbar from "@/components/Appbar";
+import { Toaster } from "@/components/ui/sonner";
 
 const satoshi = localFont({
   src: "./Satoshi-Variable.ttf",
@@ -27,6 +28,7 @@ export default function RootLayout({
           <Appbar />
 
           {children}
+          <Toaster/>
         </body>
       </QueryProvider>
     </html>

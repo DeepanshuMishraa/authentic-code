@@ -1,13 +1,16 @@
 'use client'
 
-import { ChunkTheRepositories, fetchRepoAndSave } from "@/actions/action";
+import { ChunkTheRepositories, fetchRepoAndSave, getAnalysis } from "@/actions/action";
 import { Button } from "@/components/ui/button";
 import { GitHubRepo } from "@/lib/types";
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function Dash() {
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
+  const router = useRouter();
 
   const query = useQuery<GitHubRepo[]>({
     queryKey: ['repos'],
@@ -23,15 +26,22 @@ export default function Dash() {
 
   const mutation = useMutation({
     mutationFn: async (repoUrl: string) => {
-      return await ChunkTheRepositories({ repoUrl });
+      const chunk = await ChunkTheRepositories({ repoUrl });
+      if (!chunk.success) {
+        throw new Error(chunk.message);
+      }
+      return chunk.repoId as string;
     },
-    onSuccess: (data) => {
-      console.log("Analysis: ", data);
+    onSuccess: (repoId) => {
+      console.log("Analysis completed");
       setAnalyzingId(null);
+      toast.success("Analysis completed successfully");
+      router.push(`/dashboard/${repoId}`);
     },
     onError: (error) => {
-      console.error("Analysis error :", error);
+      console.error("Analysis error:", error);
       setAnalyzingId(null);
+      toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
