@@ -2,6 +2,7 @@
 
 import { getAnalysis } from "@/actions/action";
 import { useQuery } from "@tanstack/react-query";
+import { use } from "react";
 
 interface AnalysisResult {
   id: string;
@@ -13,10 +14,12 @@ interface AnalysisResult {
 }
 
 export default function Result({ params }: { params: { id: string } }) {
+  const { id } = use(params);
   const query = useQuery<AnalysisResult[]>({
-    queryKey: ['analysis', params.id],
+    queryKey: ['analysis', id],
     queryFn: async (): Promise<AnalysisResult[]> => {
-      const data = await getAnalysis(params.id);
+
+      const data = await getAnalysis(id);
       if (!data) throw new Error('No analysis results found');
       return data;
     }
