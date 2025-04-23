@@ -8,6 +8,10 @@ import { headers } from "next/headers";
 import { v4 as uuidv4 } from 'uuid';
 import * as JSZip from "jszip";
 import { AnalyzeCode } from "@/lib/ai";
+import { connectRedis } from "@/lib/redis";
+
+
+const redis = await connectRedis();
 
 
 export async function fetchRepoAndSave() {
@@ -21,6 +25,12 @@ export async function fetchRepoAndSave() {
     }
 
     const userId = session?.user.id;
+
+    const cachedRepos = await redis.get(`repos:${userId}`);
+    if (cachedRepos) {
+      return JSON.parse(cachedRepos);
+    }
+
     const githubAccount = await db.select().from(account).where(eq(account.userId, userId));
 
     if (!githubAccount[0] || !githubAccount[0].accessToken) {
@@ -43,6 +53,8 @@ export async function fetchRepoAndSave() {
 
     const repos = await response.json();
     allRepos.push(...repos);
+    
+    await redis.setEx(`repos:${userId}`, 3600, JSON.stringify(allRepos));
 
     const existingRepos = await db
       .select({
@@ -76,7 +88,7 @@ export async function fetchRepoAndSave() {
   }
 }
 
-export async function ChunkTheRepositories(repo: any) {
+export async function ChunkTheRepositories(repo: { repoUrl: string, repoName?: string, id?: string }) {
   try {
     if (!repo.repoUrl) {
       throw new Error("Invalid repository URL");
@@ -90,7 +102,50 @@ export async function ChunkTheRepositories(repo: any) {
       throw new Error("Unauthorized");
     }
 
-    const userId = session?.user.id;
+    const userId = session.user.id;
+    const redisKey = `repo:${repo.repoUrl}`;
+
+
+    const cachedData = await redis.get(redisKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      return {
+        success: true,
+        source: "cache",
+        ...parsed
+      };
+    }
+
+    const existingRepo = await db
+      .select()
+      .from(repositories)
+      .where(eq(repositories.repoUrl, repo.repoUrl))
+      .limit(1);
+
+    if (existingRepo[0]) {
+      const repoId = existingRepo[0].id;
+      const scanResults = await db
+        .select()
+        .from(scanResult)
+        .where(eq(scanResult.repoId, repoId));
+
+      if (scanResults.length > 0) {
+        const payload = {
+          chunksAnalyzed: scanResults.length,
+          analysisResults: scanResults,
+          repoId: repoId
+        };
+
+        await redis.setEx(redisKey, 3600, JSON.stringify(payload)); // 1 hour TTL
+
+        return {
+          success: true,
+          source: "database",
+          ...payload
+        };
+      }
+    }
+
     const githubAccount = await db.select().from(account).where(eq(account.userId, userId));
 
     if (!githubAccount[0] || !githubAccount[0].accessToken) {
@@ -144,17 +199,25 @@ export async function ChunkTheRepositories(repo: any) {
       results.push(result);
     }
 
-    const existingRepo = await db
-      .select()
-      .from(repositories)
-      .where(eq(repositories.repoUrl, repo.repoUrl))
-      .limit(1);
+    const repoId = existingRepo[0]?.id || uuidv4();
+
+    const repoName = repo.repoName || repo.repoUrl.split('/').pop() || 'unnamed-repo';
 
     if (!existingRepo[0]) {
-      throw new Error("Repository not found in database");
+      await db.insert(repositories).values({
+        id: repoId,
+        repoUrl: repo.repoUrl,
+        repoName: repoName,
+        userId: userId,
+        createdAt: new Date(),
+        lastScannedAt: new Date(),
+      });
+    } else {
+      await db
+        .update(repositories)
+        .set({ lastScannedAt: new Date() })
+        .where(eq(repositories.id, repoId));
     }
-
-    const repoId = existingRepo[0].id;
 
     for (const result of results) {
       await db.insert(scanResult).values({
@@ -167,11 +230,18 @@ export async function ChunkTheRepositories(repo: any) {
       });
     }
 
-    return {
-      success: true,
+    const payload = {
       chunksAnalyzed: results.length,
       analysisResults: results,
       repoId: repoId
+    };
+
+    await redis.setEx(redisKey, 3600, JSON.stringify(payload)); // 1 hour TTL
+
+    return {
+      success: true,
+      source: "fresh",
+      ...payload
     };
 
   } catch (error: any) {
@@ -181,6 +251,7 @@ export async function ChunkTheRepositories(repo: any) {
     };
   }
 }
+
 
 
 export async function getAnalysis(repoId: string) {
