@@ -53,7 +53,7 @@ export async function fetchRepoAndSave() {
 
     const repos = await response.json();
     allRepos.push(...repos);
-    
+
     await redis.setEx(`repos:${userId}`, 3600, JSON.stringify(allRepos));
 
     const existingRepos = await db
@@ -105,7 +105,7 @@ export async function ChunkTheRepositories(repo: { repoUrl: string, repoName?: s
     const userId = session.user.id;
     const redisKey = `repo:${repo.repoUrl}`;
 
-
+    // Check cache first
     const cachedData = await redis.get(redisKey);
     if (cachedData) {
       const parsed = JSON.parse(cachedData);
@@ -136,8 +136,7 @@ export async function ChunkTheRepositories(repo: { repoUrl: string, repoName?: s
           repoId: repoId
         };
 
-        await redis.setEx(redisKey, 3600, JSON.stringify(payload)); // 1 hour TTL
-
+        await redis.setEx(redisKey, 3600, JSON.stringify(payload));
         return {
           success: true,
           source: "database",
@@ -169,38 +168,69 @@ export async function ChunkTheRepositories(repo: { repoUrl: string, repoName?: s
     const buffer = await zipResponse.arrayBuffer();
     const zip = await JSZip.loadAsync(buffer);
 
-    let allFiles: { path: string; content: string }[] = [];
-    for (const relativePath in zip.files) {
-      const file = zip.files[relativePath];
-      if (!file.dir && /\.(js|ts|tsx|jsx|py|go|rs|java|cpp|c|cs|html|css|json|md)$/.test(file.name)) {
-        const content = await file.async("text");
-        allFiles.push({ path: file.name, content });
+    const files = Object.keys(zip.files).filter(path => {
+      const file = zip.files[path];
+      return !file.dir && /\.(js|ts|tsx|jsx|py|go|rs|java|cpp|c|cs|html|css|json|md)$/.test(file.name);
+    });
+
+    const fileContents: { name: string; content: string }[] = [];
+    for (const filePath of files) {
+      const file = zip.files[filePath];
+      const content = await file.async("text");
+      if (content.trim()) {
+        fileContents.push({
+          name: file.name,
+          content: content.trim()
+        });
       }
     }
 
+    const MAX_TOKENS_PER_CHUNK = 4000;
     const chunks: string[] = [];
-    let currentChunk = "";
+    let currentChunk = '';
+    let currentTokenCount = 0;
 
-    for (const file of allFiles) {
-      if (currentChunk.length + file.content.length > 1500) {
-        chunks.push(currentChunk);
-        currentChunk = "";
+    for (const file of fileContents) {
+      const fileContent = `\n// FILE: ${file.name}\n${file.content}\n`;
+      const estimatedTokens = Math.ceil(fileContent.length / 4);
+
+      if (currentTokenCount + estimatedTokens > MAX_TOKENS_PER_CHUNK) {
+        if (currentChunk) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+          currentTokenCount = 0;
+        }
       }
-      currentChunk += `\n// FILE: ${file.path}\n${file.content}\n`;
+
+      currentChunk += fileContent;
+      currentTokenCount += estimatedTokens;
+
+      // If current file made chunk too big, create a new chunk just for this file
+      if (currentTokenCount > MAX_TOKENS_PER_CHUNK) {
+        chunks.push(fileContent.trim());
+        currentChunk = '';
+        currentTokenCount = 0;
+      }
     }
 
-    if (currentChunk.trim().length > 0) {
-      chunks.push(currentChunk);
+    // Add the last chunk if there's any content left
+    if (currentChunk) {
+      chunks.push(currentChunk.trim());
     }
 
-    const results = [];
-    for (const chunk of chunks) {
-      const result = await AnalyzeCode(chunk);
-      results.push(result);
-    }
+    // Analyze all chunks together
+    const results = await Promise.all(
+      chunks.map(async (chunk) => {
+        try {
+          return await AnalyzeCode(chunk);
+        } catch (error) {
+          console.error("Error analyzing chunk:", error);
+          return null;
+        }
+      })
+    );
 
     const repoId = existingRepo[0]?.id || uuidv4();
-
     const repoName = repo.repoName || repo.repoUrl.split('/').pop() || 'unnamed-repo';
 
     if (!existingRepo[0]) {
@@ -219,24 +249,38 @@ export async function ChunkTheRepositories(repo: { repoUrl: string, repoName?: s
         .where(eq(repositories.id, repoId));
     }
 
-    for (const result of results) {
-      await db.insert(scanResult).values({
-        id: uuidv4(),
-        repoId: repoId,
-        authencityScore: result.authenticityScore,
-        confidenceLevel: result.confidenceLevel,
-        reasoning: result.reasoning,
-        createdAt: new Date()
-      });
-    }
+    const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+    const averageScore = validResults.length > 0
+      ? validResults.reduce((sum, r) => sum + r.authenticityScore, 0) / validResults.length
+      : 0;
+
+    const uniqueObservations = new Set<string>();
+    validResults.forEach(r => {
+      const observations = r.reasoning.split('.').filter(Boolean);
+      observations.forEach(obs => uniqueObservations.add(obs.trim()));
+    });
+
+    const topObservations = Array.from(uniqueObservations).slice(0, 3);
+
+
+    const aggregateResult = {
+      id: uuidv4(),
+      repoId: repoId,
+      authencityScore: Number(averageScore),
+      confidenceLevel: validResults[0]?.confidenceLevel || "Medium",
+      reasoning: topObservations.join('. '),
+      createdAt: new Date()
+    };
+
+    await db.insert(scanResult).values(aggregateResult);
 
     const payload = {
-      chunksAnalyzed: results.length,
-      analysisResults: results,
+      chunksAnalyzed: chunks.length,
+      analysisResults: [aggregateResult],
       repoId: repoId
     };
 
-    await redis.setEx(redisKey, 3600, JSON.stringify(payload)); // 1 hour TTL
+    await redis.setEx(redisKey, 3600, JSON.stringify(payload));
 
     return {
       success: true,
@@ -245,6 +289,7 @@ export async function ChunkTheRepositories(repo: { repoUrl: string, repoName?: s
     };
 
   } catch (error: any) {
+    console.error("Repository analysis failed:", error);
     return {
       success: false,
       message: error.message || "Unknown error"

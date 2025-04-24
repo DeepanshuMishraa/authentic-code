@@ -1,6 +1,6 @@
 'use client'
 
-import { ChunkTheRepositories, fetchRepoAndSave, getAnalysis } from "@/actions/action";
+import { ChunkTheRepositories, fetchRepoAndSave } from "@/actions/action";
 import { Button } from "@/components/ui/button";
 import { GitHubRepo } from "@/lib/types";
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -47,7 +47,7 @@ export default function Dash() {
 
   if (query.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-[70svh]">
         <h1 className="text-2xl font-bold leading-loose">Loading Repositories....</h1>
       </div>
     );
