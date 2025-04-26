@@ -91,4 +91,102 @@ export async function AnalyzeCode(code: string) {
   }
 }
 
+export async function AssignUniqueCards(analysis: any) {
+  try {
+    const prompt = `
+You are a creative game designer.
 
+Given the following code repository authenticity analysis, invent a *unique fantasy character card* for the repository.
+
+- Authenticity Score: ${analysis.authenticityScore}
+- Confidence Level: ${analysis.confidenceLevel}
+- Reasoning: ${analysis.reasoning}
+
+**Create these fields for the card:**
+- Character Name:
+- Title:
+- Primary Traits: (3 adjectives)
+- Special Skills: (2 fantasy-style abilities)
+- Weaknesses: (1)
+- Background Story: (in 2-3 sentences)
+
+**Style:** 
+Think like a mix between Dungeons & Dragons, Diablo, and League of Legends. Be witty but not cringy. Short, punchy sentences.
+
+The higher the authenticity score, the more powerful and heroic the character should be.
+The lower the authenticity score, the more villainous or shady the character.
+
+ONLY RETURN A JSON OBJECT LIKE THIS:
+{
+  "characterName": "",
+  "title": "",
+  "traits": [],
+  "skills": [],
+  "weakness": "",
+  "backgroundStory": ""
+}
+`;
+
+    const card = await generateText({
+      model: groq('meta-llama/llama-4-scout-17b-16e-instruct'),
+      messages: [
+        {
+          role: "system",
+          content: prompt
+        }
+      ]
+    });
+
+    const response = card.response.messages[0].content;
+
+    if (!response) {
+      throw new Error("Empty response from AI");
+    }
+
+    let result = typeof response === 'string' ? response : response[0]?.text || '';
+    result = result.trim();
+
+    let jsonStr = result;
+    const markdownMatch = result.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (markdownMatch) {
+      jsonStr = markdownMatch[1].trim();
+    }
+
+    try {
+      const parsed = JSON.parse(jsonStr);
+      return {
+        success: true,
+        card: {
+          characterName: parsed.characterName || "Nameless Hero",
+          title: parsed.title || "Wanderer",
+          traits: parsed.traits || [],
+          skills: parsed.skills || [],
+          weakness: parsed.weakness || "Unknown weakness",
+          backgroundStory: parsed.backgroundStory || "No story available."
+        }
+      };
+    } catch (error) {
+      const jsonRegex = /{[\s\S]*}/;
+      const jsonMatch = result.match(jsonRegex);
+      if (jsonMatch) {
+        const extracted = JSON.parse(jsonMatch[0]);
+        return {
+          success: true,
+          card: {
+            characterName: extracted.characterName || "Nameless Hero",
+            title: extracted.title || "Wanderer",
+            traits: extracted.traits || [],
+            skills: extracted.skills || [],
+            weakness: extracted.weakness || "Unknown weakness",
+            backgroundStory: extracted.backgroundStory || "No story available."
+          }
+        };
+      }
+      throw new Error("Could not parse AI response");
+    }
+
+  } catch (error: any) {
+    console.error("Card generation failed:", error);
+    throw new Error(`AI card generation failed: ${error.message}`);
+  }
+}

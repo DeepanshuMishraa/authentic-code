@@ -1,7 +1,7 @@
-import { User } from "@/lib/types";
 
 
-export default function AuthenCityCard({ UserData }: { UserData: User }) {
+
+export default function AuthenCityCard() {
   return (
     <div>
       User Authencity Card is this

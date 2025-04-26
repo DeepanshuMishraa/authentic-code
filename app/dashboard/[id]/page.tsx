@@ -1,11 +1,12 @@
 'use client'
 
-import { getAnalysis } from "@/actions/action";
+import { getAnalysis, getUniqueCard } from "@/actions/action";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { use } from "react";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 interface AnalysisResult {
   id: string;
@@ -26,6 +27,16 @@ export default function Result({ params }: { params: { id: string } }) {
       const data = await getAnalysis(id);
       if (!data) throw new Error('No analysis results found');
       return data;
+    }
+  });
+
+  const cardMutation = useMutation({
+    mutationFn: getUniqueCard,
+    onSuccess: (data) => {
+      toast.success("Card generated successfully!");
+    },
+    onError: (error) => {
+      toast.error(`Failed to generate card: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
@@ -99,6 +110,61 @@ export default function Result({ params }: { params: { id: string } }) {
                 <div className="text-xs text-gray-500 mt-2">
                   Analyzed on: {new Date(result.createdAt).toLocaleDateString()}
                 </div>
+                <div className="border-t pt-4 mt-4">
+                  <Button
+                    onClick={() => cardMutation.mutate()}
+                    disabled={cardMutation.isPending}
+                    className="w-full justify-center"
+                    variant="outline"
+                  >
+                    {cardMutation.isPending ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-t-2 border-b-2 border-current rounded-full animate-spin"></div>
+                        Generating your card...
+                      </div>
+                    ) : (
+                      'Get Your Unique Card'
+                    )}
+                  </Button>
+                </div>
+
+                {cardMutation.isSuccess && cardMutation.data && (
+                  <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                    <h3 className="text-lg font-semibold text-blue-900 mb-2">Your Unique Character Card</h3>
+                    <div className="space-y-2">
+                      <div className="flex flex-col gap-1">
+                        <h4 className="text-base font-semibold text-blue-800">
+                          {cardMutation.data.card.characterName}
+                        </h4>
+                        <p className="text-sm text-blue-700 italic">
+                          {cardMutation.data.card.title}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-sm text-blue-700">
+                          <span className="font-medium">Traits:</span>{' '}
+                          {cardMutation.data.card.traits.join(', ')}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          <span className="font-medium">Special Skills:</span>{' '}
+                          {cardMutation.data.card.skills.join(', ')}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          <span className="font-medium">Weakness:</span>{' '}
+                          {cardMutation.data.card.weakness}
+                        </p>
+                      </div>
+
+                      <div className="mt-2 text-sm text-blue-700">
+                        <span className="font-medium">Background Story:</span>
+                        <p className="mt-1 italic">
+                          {cardMutation.data.card.backgroundStory}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
