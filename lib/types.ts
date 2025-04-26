@@ -7,4 +7,13 @@ export interface GitHubRepo {
   updated_at: string;
   language: string;
   private: boolean;
+
+}
+
+export interface User {
+  id: number,
+  avatar: string,
+  unique_name: string,
+  traits: string[],
+  username: string,
 }

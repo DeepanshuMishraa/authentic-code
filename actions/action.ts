@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm"
 import { headers } from "next/headers";
 import { v4 as uuidv4 } from 'uuid';
 import * as JSZip from "jszip";
-import { AnalyzeCode } from "@/lib/ai";
+import { AnalyzeCode, AssignUniqueCards } from "@/lib/ai";
 import { connectRedis } from "@/lib/redis";
 
 
@@ -308,5 +308,67 @@ export async function getAnalysis(repoId: string) {
     return analysis;
   } catch (error) {
     throw error;
+  }
+}
+
+export async function getUniqueCard() {
+  try {
+    // Get session
+    const session = await auth.api.getSession({
+      headers: await headers()
+    });
+
+    if (!session?.user) {
+      throw new Error("Unauthorized: No user session found.");
+    }
+
+    const userId = session.user.id;
+
+    const cachedCards = await redis.get(`cards:${userId}`);
+    if (cachedCards) {
+      return JSON.parse(cachedCards);
+    }
+    const repo = await db
+      .select()
+      .from(repositories)
+      .where(eq(repositories.userId, userId));
+
+    if (!repo[0]) {
+      throw new Error("No repositories found for user.");
+    }
+
+    const repoId = repo[0].id;
+
+    const analysisResults = await db
+      .select()
+      .from(scanResult)
+      .where(eq(scanResult.repoId, repoId));
+
+    if (!analysisResults.length) {
+      throw new Error("No analysis found for the repository.");
+    }
+
+    const latestAnalysis = analysisResults
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+
+    const analysis = {
+      id: latestAnalysis.id,
+      repoId: latestAnalysis.repoId,
+      authenticityScore: latestAnalysis.authencityScore,
+      confidenceLevel: latestAnalysis.confidenceLevel,
+      reasoning: latestAnalysis.reasoning,
+      createdAt: latestAnalysis.createdAt,
+    };
+
+  
+    const uniqueCard = await AssignUniqueCards(analysis);
+    
+    await redis.setEx(`cards:${userId}`, 3600, JSON.stringify(uniqueCard));
+
+    return uniqueCard;
+
+  } catch (error: any) {
+    console.error("Error fetching unique card:", error);
+    throw new Error(`Failed to fetch unique card: ${error.message}`);
   }
 }
