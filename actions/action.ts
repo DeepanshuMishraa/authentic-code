@@ -360,9 +360,9 @@ export async function getUniqueCard() {
       createdAt: latestAnalysis.createdAt,
     };
 
-  
+
     const uniqueCard = await AssignUniqueCards(analysis);
-    
+
     await redis.setEx(`cards:${userId}`, 3600, JSON.stringify(uniqueCard));
 
     return uniqueCard;
@@ -370,5 +370,26 @@ export async function getUniqueCard() {
   } catch (error: any) {
     console.error("Error fetching unique card:", error);
     throw new Error(`Failed to fetch unique card: ${error.message}`);
+  }
+}
+
+
+export async function searchRepositories(query: string) {
+
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers()
+    });
+
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    const userId = session?.user.id;
+  } catch (error) {
+    return {
+      success: false,
+      message: error
+    }
   }
 }
