@@ -3,7 +3,7 @@
 import { db } from "@/db"
 import { account, repositories, scanResult } from "@/db/schema"
 import { auth } from "@/lib/auth";
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { headers } from "next/headers";
 import { v4 as uuidv4 } from 'uuid';
 import * as JSZip from "jszip";
@@ -386,6 +386,20 @@ export async function searchRepositories(query: string) {
     }
 
     const userId = session?.user.id;
+
+    const repos = await db.select().from(repositories).where(and(
+      eq(repositories.userId, userId),
+      eq(repositories.repoName, query)
+    ));
+
+    if (repos.length === 0) {
+      return {
+        success: false,
+        message: "No repositories found"
+      }
+    }
+
+    return repos;
   } catch (error) {
     return {
       success: false,
