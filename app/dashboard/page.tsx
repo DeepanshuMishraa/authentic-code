@@ -6,10 +6,9 @@ import { authClient } from "@/lib/auth.client";
 import { GitHubRepo } from "@/lib/types";
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
-
 
 const springTransition = {
   type: "spring",
@@ -24,7 +23,7 @@ const fadeInScale = {
   transition: springTransition
 }
 
-export default function Dash() {
+function DashboardContent() {
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const router = useRouter();
   const session = authClient.useSession();
@@ -291,5 +290,17 @@ export default function Dash() {
         </LayoutGroup>
       </div>
     </div>
+  );
+}
+
+export default function Dash() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
