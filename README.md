@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CodeDoc.AI - Code Authenticity Analyzer
+
+CodeDoc.AI is a professional code analysis platform that helps you verify the authenticity of code in your GitHub repositories. Using advanced AI technology, it provides detailed insights, authenticity scores, and comprehensive analysis to ensure code quality.
+
+## Features
+
+### 🔍 Authenticity Scoring
+- Get precise scores based on comprehensive code analysis
+- AI-powered detection of code patterns and characteristics
+- Confidence level indicators for analysis results
+
+### 📊 Repository Insights
+- Deep analysis of code patterns and quality metrics
+- Detailed reasoning for authenticity assessments
+- Writing style analysis and code organization evaluation
+
+### 🔒 Secure Analysis
+- Safe and private analysis of your repositories
+- GitHub OAuth integration for secure access
+- Real-time analysis results and caching
+
+## Technology Stack
+
+- **Frontend:** Next.js 14+, React, TypeScript
+- **Styling:** Tailwind CSS with custom UI components
+- **Authentication:** GitHub OAuth
+- **Database:** PostgreSQL with Drizzle ORM
+- **Caching:** Redis for performance optimization
+- **AI Integration:** Advanced LLM models for code analysis
+- **Animation:** Framer Motion for smooth UI transitions
 
 ## Getting Started
 
-First, run the development server:
-
+1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/authentic-code.git
+cd authentic-code
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies
+```bash
+bun install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables
+```bash
+# Create a .env file with the following variables
+DATABASE_URL=your_postgres_url
+REDIS_URL=your_redis_url
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Initialize the database
+```bash
+bun run db:generate
+bun run db:push
+```
 
-## Learn More
+5. Start the development server
+```bash
+bun run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+The application will be available at `http://localhost:3000`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License - see the LICENSE file for details.
