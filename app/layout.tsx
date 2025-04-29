@@ -12,6 +12,31 @@ const satoshi = localFont({
 export const metadata: Metadata = {
   title: "codedoc.ai",
   description: "AI powered vibe coding checker",
+  openGraph: {
+    title: "codedoc.ai",
+    description: "AI powered vibe coding checker",
+    images: [
+      {
+        url: "https://codedoc.deepanshumishra.xyz/og.png",
+        width: 1200,
+        height: 630,
+        alt: "codedoc.ai",
+      }
+    ]
+  },
+  twitter: {
+    title: "codedoc.ai",
+    description: "AI powered vibe coding checker",
+    images: [
+      {
+        url: "https://codedoc.deepanshumishra.xyz/og.png",
+        width: 1200,
+        height: 630,
+        alt: "codedoc.ai",
+      }
+    ],
+    creator:"@deepanshuDipxsy"
+  },
 };
 
 export default function RootLayout({

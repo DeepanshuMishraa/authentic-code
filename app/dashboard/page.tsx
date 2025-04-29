@@ -5,16 +5,11 @@ import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth.client";
 import { GitHubRepo } from "@/lib/types";
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Metadata } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 
-const metadata: Metadata = {
-  title: "Repositories",
-  description: "Your repositories",
-}
 
 const springTransition = {
   type: "spring",

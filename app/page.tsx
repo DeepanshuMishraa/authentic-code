@@ -4,13 +4,13 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-dot-pattern">
+    <div className="flex min-h-screen flex-col items-center justify-center ">
       <div className="max-w-3xl mx-auto px-4 py-16 sm:px-6 sm:py-24 lg:px-8 relative">
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background/50 backdrop-blur-sm" />
         </div>
 
-        <div className="text-center space-y-8">
+        <div className="text-center space-y-8 motion-blur-in-md motion-duration-[1s]">
           <div className="space-y-4">
             <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-foreground">
               Analyze Code Authenticity with Confidence
