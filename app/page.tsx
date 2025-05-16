@@ -1,8 +1,11 @@
+'use client'
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth.client";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
+  const { data: session } = authClient.useSession();
   return (
     <div className="flex min-h-screen flex-col items-center justify-center ">
       <div className="max-w-3xl mx-auto px-4 py-16 sm:px-6 sm:py-24 lg:px-8 relative">
@@ -21,7 +24,7 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dashboard">
+            <Link href={session?.user ? "/dashboard" : "/login"}>
               <Button size="lg" className="w-full sm:w-auto gap-2 group">
                 Analyze Repository
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

@@ -69,7 +69,6 @@ export default function Appbar() {
             </AnimatePresence>
           </motion.div>
         )}
-
         {session?.data?.user ? (
           <Button onClick={async () => await authClient.signOut({
             fetchOptions: {
@@ -81,14 +80,11 @@ export default function Appbar() {
             Logout
           </Button>
         ) : (
-          <Button onClick={async () => {
-            await authClient.signIn.social({
-              provider: "github",
-            });
-            router.refresh();
-          }}>
-            Login with GitHub
-          </Button>
+          <Link href="/login" prefetch>
+            <Button>
+              Login
+            </Button>
+          </Link>
         )}
 
         {session?.data?.user && pathName === "/" && (
